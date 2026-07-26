@@ -114,6 +114,8 @@ export default function SubmissionDetailPage({ params }: { params: Promise<{ id:
   const { submission, candidate, test, questions = [], violations = [] } = data;
   const snapshots = submission?.recordingSnapshots || [];
   const currentSnapshot = snapshots[activeSnapshotIdx];
+  const cameraUrl = submission.videoRecordingUrl || undefined;
+  const screenUrl = submission.screenRecordingUrl || submission.videoRecordingUrl || undefined;
 
   return (
     <div>
@@ -162,10 +164,10 @@ export default function SubmissionDetailPage({ params }: { params: Promise<{ id:
               <Badge variant="neutral">Webcam Feed</Badge>
             </div>
             <div className="relative bg-black rounded-xl overflow-hidden aspect-video border border-neutral-800 flex items-center justify-center">
-              {submission.videoRecordingUrl ? (
+              {cameraUrl ? (
                 <video controls preload="auto" playsInline className="w-full h-full object-cover">
-                  <source src={submission.videoRecordingUrl} type="video/mp4" />
-                  <source src={submission.videoRecordingUrl} type="video/webm" />
+                  <source src={cameraUrl} type="video/mp4" />
+                  <source src={cameraUrl} type="video/webm" />
                 </video>
               ) : (
                 <div className="text-center p-6 text-neutral-400 text-xs">
@@ -186,10 +188,10 @@ export default function SubmissionDetailPage({ params }: { params: Promise<{ id:
               <Badge variant="neutral">Screen Capture</Badge>
             </div>
             <div className="relative bg-black rounded-xl overflow-hidden aspect-video border border-neutral-800 flex items-center justify-center">
-              {(submission.screenRecordingUrl || submission.videoRecordingUrl) ? (
+              {screenUrl ? (
                 <video controls preload="auto" playsInline className="w-full h-full object-contain">
-                  <source src={submission.screenRecordingUrl || submission.videoRecordingUrl} type="video/mp4" />
-                  <source src={submission.screenRecordingUrl || submission.videoRecordingUrl} type="video/webm" />
+                  <source src={screenUrl} type="video/mp4" />
+                  <source src={screenUrl} type="video/webm" />
                 </video>
               ) : (
                 <div className="text-center p-6 text-neutral-400 text-xs">

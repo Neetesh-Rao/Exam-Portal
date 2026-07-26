@@ -58,12 +58,19 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
     // 1. Save Camera Video File
     if (cameraFile && cameraFile.size > 0) {
       try {
-        videoRecordingUrl = await saveFileLocally(cameraFile, "camera", params.id);
-        const bytes = await cameraFile.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        if (process.env.CLOUDINARY_CLOUD_NAME) {
-          const cloudUrl = await uploadStreamToCloudinary(buffer, "webcam_recordings");
-          if (cloudUrl) videoRecordingUrl = cloudUrl;
+        const localUrl = await saveFileLocally(cameraFile, "camera", params.id);
+        videoRecordingUrl = localUrl;
+
+        // Try Cloudinary in isolated block so local URL is never lost
+        if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY) {
+          try {
+            const bytes = await cameraFile.arrayBuffer();
+            const buffer = Buffer.from(bytes);
+            const cloudUrl = await uploadStreamToCloudinary(buffer, "webcam_recordings");
+            if (cloudUrl) videoRecordingUrl = cloudUrl;
+          } catch (cloudErr) {
+            console.warn("Cloudinary camera upload warning (using local file fallback):", cloudErr);
+          }
         }
       } catch (err) {
         console.error("Camera video save error:", err);
@@ -73,12 +80,19 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
     // 2. Save Screen Video File
     if (screenFile && screenFile.size > 0) {
       try {
-        screenRecordingUrl = await saveFileLocally(screenFile, "screen", params.id);
-        const bytes = await screenFile.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        if (process.env.CLOUDINARY_CLOUD_NAME) {
-          const cloudUrl = await uploadStreamToCloudinary(buffer, "screen_recordings");
-          if (cloudUrl) screenRecordingUrl = cloudUrl;
+        const localUrl = await saveFileLocally(screenFile, "screen", params.id);
+        screenRecordingUrl = localUrl;
+
+        // Try Cloudinary in isolated block so local URL is never lost
+        if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY) {
+          try {
+            const bytes = await screenFile.arrayBuffer();
+            const buffer = Buffer.from(bytes);
+            const cloudUrl = await uploadStreamToCloudinary(buffer, "screen_recordings");
+            if (cloudUrl) screenRecordingUrl = cloudUrl;
+          } catch (cloudErr) {
+            console.warn("Cloudinary screen upload warning (using local file fallback):", cloudErr);
+          }
         }
       } catch (err) {
         console.error("Screen video save error:", err);

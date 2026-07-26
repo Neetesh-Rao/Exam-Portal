@@ -37,6 +37,8 @@ interface SubmissionData {
     totalMarks: number;
     answers: { questionId: string; answerText?: string; selectedOptionIds?: string[]; codeAnswer?: string; isMarkedForReview?: boolean }[];
     recordingSnapshots?: RecordingSnapshot[];
+    videoRecordingUrl?: string | null;
+    screenRecordingUrl?: string | null;
     startedAt: string;
     submittedAt: string;
   };

@@ -169,10 +169,7 @@ export default function SubmissionDetailPage({ params }: { params: Promise<{ id:
             </div>
             <div className="relative bg-black rounded-xl overflow-hidden aspect-video border border-neutral-800 flex items-center justify-center">
               {cameraUrl ? (
-                <video controls preload="auto" playsInline className="w-full h-full object-cover">
-                  <source src={cameraUrl} type="video/mp4" />
-                  <source src={cameraUrl} type="video/webm" />
-                </video>
+                <video src={cameraUrl} controls preload="auto" playsInline className="w-full h-full object-cover" />
               ) : (
                 <div className="text-center p-6 text-neutral-400 text-xs">
                   <Video className="w-8 h-8 mx-auto mb-2 opacity-40 text-emerald-400" />
@@ -193,10 +190,7 @@ export default function SubmissionDetailPage({ params }: { params: Promise<{ id:
             </div>
             <div className="relative bg-black rounded-xl overflow-hidden aspect-video border border-neutral-800 flex items-center justify-center">
               {screenUrl ? (
-                <video controls preload="auto" playsInline className="w-full h-full object-contain">
-                  <source src={screenUrl} type="video/mp4" />
-                  <source src={screenUrl} type="video/webm" />
-                </video>
+                <video src={screenUrl} controls preload="auto" playsInline className="w-full h-full object-contain" />
               ) : (
                 <div className="text-center p-6 text-neutral-400 text-xs">
                   <Video className="w-8 h-8 mx-auto mb-2 opacity-40 text-blue-400" />

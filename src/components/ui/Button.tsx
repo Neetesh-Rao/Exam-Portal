@@ -5,10 +5,11 @@ import { motion, HTMLMotionProps } from "framer-motion";
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "sm" | "md" | "lg";
 
-export interface ButtonProps extends Omit<HTMLMotionProps<"button">, "ref"> {
+export interface ButtonProps extends Omit<HTMLMotionProps<"button">, "ref" | "children"> {
   variant?: Variant;
   size?: Size;
   loading?: boolean;
+  children?: React.ReactNode;
 }
 
 const variantClasses: Record<Variant, string> = {

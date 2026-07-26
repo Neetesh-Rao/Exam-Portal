@@ -30,6 +30,7 @@ export default function ExamPage({ params }: { params: Promise<{ token: string }
   const searchParams = useSearchParams();
   const submissionId = searchParams.get("submissionId");
 
+  const [subIdState, setSubIdState] = useState<string>(submissionId || "");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -53,6 +54,8 @@ export default function ExamPage({ params }: { params: Promise<{ token: string }
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const cameraBlobsRef = useRef<Blob[]>([]);
   const screenBlobsRef = useRef<Blob[]>([]);
+  const webcamRecorderRef = useRef<MediaRecorder | null>(null);
+  const screenRecorderRef = useRef<MediaRecorder | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
 
   // Load test data
@@ -62,6 +65,7 @@ export default function ExamPage({ params }: { params: Promise<{ token: string }
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token }),
     }).then((r) => r.json()).then((d) => {
+      if (d.submission?.id) setSubIdState(d.submission.id);
       if (d.questions) setQuestions(d.questions);
       if (d.submission?.answers) setAnswers(d.submission.answers);
       if (d.test?.totalDurationSeconds) {
@@ -208,6 +212,7 @@ export default function ExamPage({ params }: { params: Promise<{ token: string }
 
         if (window.MediaRecorder && webcamStream) {
           webcamRecorder = new MediaRecorder(webcamStream);
+          webcamRecorderRef.current = webcamRecorder;
           webcamRecorder.ondataavailable = (event: BlobEvent) => {
             if (event.data && event.data.size > 0) {
               cameraBlobsRef.current.push(event.data);
@@ -229,6 +234,7 @@ export default function ExamPage({ params }: { params: Promise<{ token: string }
 
         if (window.MediaRecorder && screenStream) {
           screenRecorder = new MediaRecorder(screenStream);
+          screenRecorderRef.current = screenRecorder;
           screenRecorder.ondataavailable = (event: BlobEvent) => {
             if (event.data && event.data.size > 0) {
               screenBlobsRef.current.push(event.data);
@@ -245,7 +251,8 @@ export default function ExamPage({ params }: { params: Promise<{ token: string }
 
     // Fallback periodic canvas snapshot every 10 seconds
     const captureInterval = setInterval(() => {
-      if (!videoRef.current || !canvasRef.current || !submissionId) return;
+      const activeSubId = subIdState || submissionId;
+      if (!videoRef.current || !canvasRef.current || !activeSubId) return;
 
       const video = videoRef.current;
       const canvas = canvasRef.current;
@@ -257,7 +264,7 @@ export default function ExamPage({ params }: { params: Promise<{ token: string }
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const imageUrl = canvas.toDataURL("image/jpeg", 0.5);
 
-        fetch(`/api/submissions/${submissionId}/webcam-snapshot`, {
+        fetch(`/api/submissions/${activeSubId}/webcam-snapshot`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ imageUrl, event: "proctoring_snapshot" }),
@@ -272,18 +279,34 @@ export default function ExamPage({ params }: { params: Promise<{ token: string }
       if (webcamStream) webcamStream.getTracks().forEach((track) => track.stop());
       if (screenStream) screenStream.getTracks().forEach((track) => track.stop());
     };
-  }, [loading, testEnded, submissionId]);
+  }, [loading, testEnded, submissionId, subIdState]);
+
+  // Periodic video recording sync every 15 seconds
+  useEffect(() => {
+    if (loading || testEnded) return;
+    const activeSubId = subIdState || submissionId;
+    if (!activeSubId) return;
+
+    const interval = setInterval(() => {
+      uploadRecordingsToCloudinary();
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [loading, testEnded, subIdState, submissionId]);
 
   const logViolation = async (type: string) => {
+    const activeSubId = subIdState || submissionId;
     const newCount = violations + 1;
     setViolations(newCount);
     setShowWarning(true);
 
-    await fetch(`/api/submissions/${submissionId}/violation`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type }),
-    });
+    if (activeSubId) {
+      await fetch(`/api/submissions/${activeSubId}/violation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type }),
+      });
+    }
 
     if (newCount >= maxViolations) {
       handleAutoSubmit();
@@ -291,15 +314,18 @@ export default function ExamPage({ params }: { params: Promise<{ token: string }
   };
 
   const saveAnswer = useCallback(async (answer: Answer) => {
+    const activeSubId = subIdState || submissionId;
+    if (!activeSubId) return;
+
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(async () => {
-      await fetch(`/api/submissions/${submissionId}/answer`, {
+      await fetch(`/api/submissions/${activeSubId}/answer`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(answer),
       });
     }, 500);
-  }, [submissionId]);
+  }, [submissionId, subIdState]);
 
   const updateAnswer = (update: Partial<Answer>) => {
     const q = questions[currentIdx];
@@ -318,7 +344,19 @@ export default function ExamPage({ params }: { params: Promise<{ token: string }
 
   const uploadRecordingsToCloudinary = async () => {
     try {
-      if (!submissionId) return;
+      const activeSubId = subIdState || submissionId;
+      if (!activeSubId) return;
+
+      if (webcamRecorderRef.current && webcamRecorderRef.current.state !== "inactive") {
+        try { webcamRecorderRef.current.requestData(); } catch (e) {}
+      }
+      if (screenRecorderRef.current && screenRecorderRef.current.state !== "inactive") {
+        try { screenRecorderRef.current.requestData(); } catch (e) {}
+      }
+
+      await new Promise((r) => setTimeout(r, 200));
+
+      if (cameraBlobsRef.current.length === 0 && screenBlobsRef.current.length === 0) return;
 
       const formData = new FormData();
 
@@ -332,14 +370,12 @@ export default function ExamPage({ params }: { params: Promise<{ token: string }
         formData.append("screenVideo", screenBlob, "screen_recording.webm");
       }
 
-      if (cameraBlobsRef.current.length > 0 || screenBlobsRef.current.length > 0) {
-        await fetch(`/api/submissions/${submissionId}/upload-full-recordings`, {
-          method: "POST",
-          body: formData,
-        });
-      }
+      await fetch(`/api/submissions/${activeSubId}/upload-full-recordings`, {
+        method: "POST",
+        body: formData,
+      });
     } catch (err) {
-      console.warn("Cloudinary upload error on submission:", err);
+      console.warn("Upload recording error:", err);
     }
   };
 

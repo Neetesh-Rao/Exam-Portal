@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #FFFFFF;
+  --color-bg-subtle: #FAFAFA;
+  --color-surface: #FFFFFF;
+  --color-border: #E5E5E5;
+  --color-border-strong: #D4D4D4;
+  --color-text-primary: #0A0A0A;
+  --color-text-secondary: #525252;
+  --color-text-muted: #737373;
+  --color-black: #0A0A0A;
+  --color-white: #FFFFFF;
+  
+  /* Pure Monochrome Accent (Black in Light, White in Dark) */
+  --color-accent: #0A0A0A;
+  --color-accent-hover: #262626;
+  --color-accent-subtle: #F5F5F5;
+  
+  --color-success: #171717;
+  --color-success-subtle: #F5F5F5;
+  --color-warning: #404040;
+  --color-warning-subtle: #F5F5F5;
+  --color-danger: #0A0A0A;
+  --color-danger-subtle: #FAFAFA;
+  
+  --color-bg-dark: #0A0A0A;
+  --color-surface-dark: #121212;
+  --color-border-dark: #262626;
+  --color-text-primary-dark: #FAFAFA;
+  --color-text-secondary-dark: #A3A3A3;
+}
+
+:root {
+  --bg-color: var(--color-bg);
+  --surface-color: var(--color-surface);
+  --border-color: var(--color-border);
+  --text-primary: var(--color-text-primary);
+  --text-secondary: var(--color-text-secondary);
+  --accent-color: #0A0A0A;
+  --accent-fg: #FFFFFF;
+}
+
+.dark {
+  --bg-color: var(--color-bg-dark);
+  --surface-color: var(--color-surface-dark);
+  --border-color: var(--color-border-dark);
+  --text-primary: var(--color-text-primary-dark);
+  --text-secondary: var(--color-text-secondary-dark);
+  --accent-color: #FAFAFA;
+  --accent-fg: #0A0A0A;
+}
+
+@layer base {
+  * {
+    border-color: var(--border-color);
+  }
+  
+  body {
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+}
+
+@layer utilities {
+  .glass {
+    background-color: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+  }
+  .dark .glass {
+    background-color: rgba(10, 10, 10, 0.85);
+  }
+  .monochrome-card {
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  }
+}
+
+/* Custom sleek scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #D4D4D4;
+  border-radius: 9999px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #262626;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #A3A3A3;
+}

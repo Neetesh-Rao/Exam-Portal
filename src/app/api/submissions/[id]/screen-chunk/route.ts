@@ -17,13 +17,14 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
       ? new mongoose.Types.ObjectId(params.id)
       : params.id;
 
-    // Update screen recording stream URL atomically
-    await Submission.updateOne(
-      { _id: subId },
-      {
-        $set: { screenRecordingUrl: screenChunkUrl },
-      }
-    );
+    // Preserve existing valid screen recording URLs (local file or Cloudinary)
+    const existing = await Submission.findById(subId).select("screenRecordingUrl").lean();
+    if (existing && (!existing.screenRecordingUrl || (!existing.screenRecordingUrl.startsWith("/uploads/") && !existing.screenRecordingUrl.startsWith("http")))) {
+      await Submission.updateOne(
+        { _id: subId },
+        { $set: { screenRecordingUrl: screenChunkUrl } }
+      );
+    }
 
     return jsonOk({ success: true }, 201);
   } catch (error) {

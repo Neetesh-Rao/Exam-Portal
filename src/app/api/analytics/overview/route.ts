@@ -19,12 +19,21 @@ export async function GET(req: NextRequest) {
       Submission.countDocuments({ companyId: auth.companyId }),
     ]);
 
-    const submissions = await Submission.find({ 
-      companyId: auth.companyId, 
-      status: { $in: ["submitted", "auto_submitted", "graded"] } 
-    });
-    const totalScore = submissions.reduce((acc, sub) => acc + (sub.finalScore || sub.autoScore || 0), 0);
-    const avgScore = submissions.length > 0 ? Math.round(totalScore / submissions.length) : 0;
+    const scoreAgg = await Submission.aggregate([
+      {
+        $match: {
+          companyId: auth.companyId,
+          status: { $in: ["submitted", "auto_submitted", "graded"] }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          avgScore: { $avg: { $ifNull: ["$finalScore", { $ifNull: ["$autoScore", 0] }] } }
+        }
+      }
+    ]);
+    const avgScore = scoreAgg.length > 0 ? Math.round(scoreAgg[0].avgScore || 0) : 0;
 
     return jsonOk({
       totalTests,

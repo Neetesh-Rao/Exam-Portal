@@ -24,19 +24,21 @@ export async function GET(req: NextRequest) {
     }
 
     const submissions = await Submission.find(query)
+      .select("-recordingSnapshots")
       .populate("candidateId")
       .populate("testId")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
-    const mapped = submissions.map((s) => {
-      const candObj = s.candidateId ? (s.candidateId as any).toObject() : null;
-      const testObj = s.testId ? (s.testId as any).toObject() : null;
+    const mapped = submissions.map((s: any) => {
+      const candObj = s.candidateId ? s.candidateId : null;
+      const testObj = s.testId ? s.testId : null;
 
       return {
-        ...s.toObject(),
+        ...s,
         id: s._id.toString(),
-        candidate: candObj ? { ...candObj, id: candObj._id.toString() } : null,
-        test: testObj ? { ...testObj, id: testObj._id.toString() } : null,
+        candidate: candObj ? { ...candObj, id: candObj._id ? candObj._id.toString() : "" } : null,
+        test: testObj ? { ...testObj, id: testObj._id ? testObj._id.toString() : "" } : null,
         finalScore: s.finalScore ?? s.autoScore ?? 0,
         autoScore: s.autoScore ?? 0,
         manualScore: s.manualScore ?? 0,

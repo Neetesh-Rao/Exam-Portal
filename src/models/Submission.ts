@@ -69,7 +69,10 @@ const SubmissionSchema = new Schema<ISubmission>(
   { timestamps: true }
 );
 
-// Compound index on testId and candidateId
+// Compound and single field indexes for high performance queries
 SubmissionSchema.index({ testId: 1, candidateId: 1 }, { unique: true });
+SubmissionSchema.index({ companyId: 1, status: 1 });
+SubmissionSchema.index({ inviteId: 1 });
+SubmissionSchema.index({ createdAt: -1 });
 
 export const Submission = mongoose.models.Submission || mongoose.model<ISubmission>("Submission", SubmissionSchema);

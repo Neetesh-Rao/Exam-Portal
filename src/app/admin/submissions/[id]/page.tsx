@@ -111,11 +111,15 @@ export default function SubmissionDetailPage({ params }: { params: Promise<{ id:
     </div>
   );
 
-  const { submission, candidate, test, questions = [], violations = [] } = data;
+  const submission = data.submission;
+  const candidate = data.candidate || (submission as any)?.candidate;
+  const test = data.test || (submission as any)?.test;
+  const questions = data.questions || (submission as any)?.questions || [];
+  const violations = data.violations || (submission as any)?.violations || [];
   const snapshots = submission?.recordingSnapshots || [];
   const currentSnapshot = snapshots[activeSnapshotIdx];
-  const cameraUrl = submission.videoRecordingUrl || undefined;
-  const screenUrl = submission.screenRecordingUrl || submission.videoRecordingUrl || undefined;
+  const cameraUrl = submission?.videoRecordingUrl || undefined;
+  const screenUrl = submission?.screenRecordingUrl || submission?.videoRecordingUrl || undefined;
 
   return (
     <div>

@@ -17,13 +17,14 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
       ? new mongoose.Types.ObjectId(params.id)
       : params.id;
 
-    // Update only the active video stream URL so document size remains small (< 1MB)
-    await Submission.updateOne(
-      { _id: subId },
-      {
-        $set: { videoRecordingUrl: videoChunkUrl },
-      }
-    );
+    // Preserve existing valid video recording URLs (local file or Cloudinary)
+    const existing = await Submission.findById(subId).select("videoRecordingUrl").lean();
+    if (existing && (!existing.videoRecordingUrl || (!existing.videoRecordingUrl.startsWith("/uploads/") && !existing.videoRecordingUrl.startsWith("http")))) {
+      await Submission.updateOne(
+        { _id: subId },
+        { $set: { videoRecordingUrl: videoChunkUrl } }
+      );
+    }
 
     return jsonOk({ success: true }, 201);
   } catch (error) {

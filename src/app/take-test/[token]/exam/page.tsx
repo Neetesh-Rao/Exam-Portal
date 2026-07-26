@@ -208,25 +208,12 @@ export default function ExamPage({ params }: { params: Promise<{ token: string }
 
         if (window.MediaRecorder && webcamStream) {
           webcamRecorder = new MediaRecorder(webcamStream);
-          webcamRecorder.ondataavailable = async (event: BlobEvent) => {
+          webcamRecorder.ondataavailable = (event: BlobEvent) => {
             if (event.data && event.data.size > 0) {
               cameraBlobsRef.current.push(event.data);
-              
-              if (submissionId) {
-                const reader = new FileReader();
-                reader.readAsDataURL(event.data);
-                reader.onloadend = () => {
-                  const base64Video = reader.result as string;
-                  fetch(`/api/submissions/${submissionId}/video-chunk`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ videoChunkUrl: base64Video }),
-                  }).catch(() => {});
-                };
-              }
             }
           };
-          webcamRecorder.start(3000);
+          webcamRecorder.start(1000);
         }
       } catch (err) {
         console.warn("Webcam access error:", err);
@@ -242,25 +229,12 @@ export default function ExamPage({ params }: { params: Promise<{ token: string }
 
         if (window.MediaRecorder && screenStream) {
           screenRecorder = new MediaRecorder(screenStream);
-          screenRecorder.ondataavailable = async (event: BlobEvent) => {
+          screenRecorder.ondataavailable = (event: BlobEvent) => {
             if (event.data && event.data.size > 0) {
               screenBlobsRef.current.push(event.data);
-              
-              if (submissionId) {
-                const reader = new FileReader();
-                reader.readAsDataURL(event.data);
-                reader.onloadend = () => {
-                  const base64Screen = reader.result as string;
-                  fetch(`/api/submissions/${submissionId}/screen-chunk`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ screenChunkUrl: base64Screen }),
-                  }).catch(() => {});
-                };
-              }
             }
           };
-          screenRecorder.start(3000);
+          screenRecorder.start(1000);
         }
       } catch (err) {
         console.warn("Screen recording access denied:", err);

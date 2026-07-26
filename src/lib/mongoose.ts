@@ -9,23 +9,17 @@ if (!cached) {
 }
 
 export async function connectToDatabase() {
-  // Ensure all models are registered for populate queries
-  require("@/models/User");
-  require("@/models/Company");
-  require("@/models/Candidate");
-  require("@/models/Test");
-  require("@/models/Question");
-  require("@/models/TestInvite");
-  require("@/models/Submission");
-  require("@/models/ViolationLog");
-
   if (cached.conn) {
     return cached.conn;
   }
 
   if (!cached.promise) {
     const opts = {
-      bufferCommands: false,
+      bufferCommands: true,
+      maxPoolSize: 10,
+      minPoolSize: 2,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
     };
 
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {

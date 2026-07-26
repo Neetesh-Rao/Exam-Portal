@@ -3,6 +3,8 @@ import { jsonOk, jsonError } from "@/lib/api-utils";
 import { connectToDatabase } from "@/lib/mongoose";
 import { Submission } from "@/models/Submission";
 import { v2 as cloudinary } from "cloudinary";
+import path from "path";
+import fs from "fs/promises";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -11,13 +13,26 @@ cloudinary.config({
   secure: true,
 });
 
+async function saveFileLocally(file: File, prefix: string, subId: string): Promise<string> {
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
+  const uploadsDir = path.join(process.cwd(), "public", "uploads", "recordings");
+  await fs.mkdir(uploadsDir, { recursive: true });
+  
+  const ext = file.name.split('.').pop() || 'webm';
+  const fileName = `${prefix}-${subId}-${Date.now()}.${ext}`;
+  const filePath = path.join(uploadsDir, fileName);
+  await fs.writeFile(filePath, buffer);
+  
+  return `/uploads/recordings/${fileName}`;
+}
+
 async function uploadStreamToCloudinary(buffer: Buffer, folder: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         resource_type: "video",
         folder: folder,
-        format: "mp4", // Force auto-transcoding to standard cross-browser MP4 video
       },
       (error, result) => {
         if (error || !result) return reject(error);
@@ -40,25 +55,33 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
     let videoRecordingUrl = "";
     let screenRecordingUrl = "";
 
-    // 1. Upload Camera Video File to Cloudinary
+    // 1. Save Camera Video File
     if (cameraFile && cameraFile.size > 0) {
       try {
+        videoRecordingUrl = await saveFileLocally(cameraFile, "camera", params.id);
         const bytes = await cameraFile.arrayBuffer();
         const buffer = Buffer.from(bytes);
-        videoRecordingUrl = await uploadStreamToCloudinary(buffer, "webcam_recordings");
+        if (process.env.CLOUDINARY_CLOUD_NAME) {
+          const cloudUrl = await uploadStreamToCloudinary(buffer, "webcam_recordings");
+          if (cloudUrl) videoRecordingUrl = cloudUrl;
+        }
       } catch (err) {
-        console.error("Camera upload to Cloudinary error:", err);
+        console.error("Camera video save error:", err);
       }
     }
 
-    // 2. Upload Screen Video File to Cloudinary
+    // 2. Save Screen Video File
     if (screenFile && screenFile.size > 0) {
       try {
+        screenRecordingUrl = await saveFileLocally(screenFile, "screen", params.id);
         const bytes = await screenFile.arrayBuffer();
         const buffer = Buffer.from(bytes);
-        screenRecordingUrl = await uploadStreamToCloudinary(buffer, "screen_recordings");
+        if (process.env.CLOUDINARY_CLOUD_NAME) {
+          const cloudUrl = await uploadStreamToCloudinary(buffer, "screen_recordings");
+          if (cloudUrl) screenRecordingUrl = cloudUrl;
+        }
       } catch (err) {
-        console.error("Screen upload to Cloudinary error:", err);
+        console.error("Screen video save error:", err);
       }
     }
 
@@ -76,7 +99,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
       screenRecordingUrl,
     });
   } catch (error) {
-    console.error("Full recordings FormData upload API error:", error);
+    console.error("Full recordings upload API error:", error);
     return jsonError("Internal Server Error", 500);
   }
 }
